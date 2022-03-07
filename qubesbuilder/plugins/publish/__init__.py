@@ -17,6 +17,8 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
+import subprocess
+
 from pathlib import Path
 
 from qubesbuilder.component import QubesComponent
@@ -52,6 +54,7 @@ class PublishPlugin(Plugin):
         gpg_client: str,
         sign_key: dict,
         repository_publish: dict,
+        remote_host: str,
         verbose: bool = False,
         debug: bool = False,
     ):
@@ -71,6 +74,26 @@ class PublishPlugin(Plugin):
         self.repository_publish = repository_publish
         self.gpg_client = gpg_client
         self.sign_key = sign_key
+        self.remote_host = remote_host
+
+    def upload_to_repository(self):
+        if not self.remote_host:
+            raise PublishError(
+                f"{self.component}:{self.dist}: Cannot find remote host."
+            )
+        try:
+            cmd = [
+                "rsync",
+                "-av",
+                "--progress",
+                f"{self.get_repository_publish_dir() / self.dist.type}/",  # Pay attention to latest "/", we use rsync!
+                {self.remote_host},
+            ]
+            subprocess.run(cmd, check=True)
+        except subprocess.CalledProcessError as e:
+            raise PublishError(
+                f"{self.component}:{self.dist}: Failed to upload to '{self.remote_host}'."
+            ) from e
 
     def run(self, stage: str):
         if stage == "publish" and not isinstance(self.executor, LocalExecutor):

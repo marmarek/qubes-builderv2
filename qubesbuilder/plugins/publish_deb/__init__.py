@@ -49,6 +49,7 @@ class DEBPublishPlugin(PublishPlugin):
         gpg_client: str,
         sign_key: dict,
         repository_publish: dict,
+        remote_host: str,
         verbose: bool = False,
         debug: bool = False,
     ):
@@ -62,6 +63,7 @@ class DEBPublishPlugin(PublishPlugin):
             gpg_client=gpg_client,
             sign_key=sign_key,
             repository_publish=repository_publish,
+            remote_host=remote_host,
             verbose=verbose,
             debug=debug,
         )
@@ -80,7 +82,11 @@ class DEBPublishPlugin(PublishPlugin):
         )
 
     def run(
-        self, stage: str, repository_publish: str = None, ignore_min_age: bool = False
+        self,
+        stage: str,
+        repository_publish: str = None,
+        automatic_upload: bool = False,
+        ignore_min_age: bool = False,
     ):
         """
         Run plugging for given stage.
@@ -278,3 +284,7 @@ class DEBPublishPlugin(PublishPlugin):
                 except (PermissionError, yaml.YAMLError) as e:
                     msg = f"{self.component}:{self.dist}:{directory}: Failed to write publish info."
                     raise PublishError(msg) from e
+
+                # Upload repository to remote host
+                if automatic_upload:
+                    self.upload_to_repository()

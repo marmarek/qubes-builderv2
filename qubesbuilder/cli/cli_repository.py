@@ -22,13 +22,19 @@ def repository():
 )
 @click.argument("repository_publish", nargs=1)
 @click.option(
+    "--automatic-upload/no-automatic-upload",
+    default=True,
+    is_flag=True,
+    help="Override minimum age for authorizing publication into 'current'.",
+)
+@click.option(
     "--ignore-min-age",
     default=False,
     is_flag=True,
     help="Override minimum age for authorizing publication into 'current'.",
 )
 @click.pass_obj
-def publish(obj: ContextObj, repository_publish: str, ignore_min_age: bool = False):
+def publish(obj: ContextObj, repository_publish: str, automatic_upload: bool, ignore_min_age: bool):
     executor = obj.config.get_stages()["publish"]["executor"]
     if repository_publish in (
         "current",
@@ -54,6 +60,7 @@ def publish(obj: ContextObj, repository_publish: str, ignore_min_age: bool = Fal
                 publish_plugin.run(
                     stage="publish",
                     repository_publish=repository_publish,
+                    automatic_upload=automatic_upload,
                     ignore_min_age=ignore_min_age,
                 )
     elif repository_publish in (
@@ -79,6 +86,7 @@ def publish(obj: ContextObj, repository_publish: str, ignore_min_age: bool = Fal
             publish_plugin.run(
                 stage="publish",
                 repository_publish=repository_publish,
+                automatic_upload=automatic_upload,
                 ignore_min_age=ignore_min_age,
             )
 

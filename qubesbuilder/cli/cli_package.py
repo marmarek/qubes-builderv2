@@ -71,6 +71,9 @@ def _component_stage(obj: ContextObj, stage_name: str):
                     sign_key=obj.config.get("sign-key"),
                     qubes_release=obj.config.get("qubes-release"),
                     repository_publish=obj.config.get("repository-publish"),
+                    remote_host=obj.config.get("repository-upload-remote-host", {}).get(
+                        dist.type, None
+                    ),
                 ),
             ]
             for plugin in plugins:

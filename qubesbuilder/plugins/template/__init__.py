@@ -20,6 +20,7 @@
 import datetime
 import os
 import shutil
+import subprocess
 from pathlib import Path
 
 import dateutil.parser
@@ -71,6 +72,7 @@ class TemplatePlugin(BasePlugin):
         gpg_client: str,
         sign_key: dict,
         repository_publish: dict,
+        remote_host: str,
         verbose: bool = False,
         debug: bool = False,
         use_qubes_repo: dict = None,
@@ -89,6 +91,7 @@ class TemplatePlugin(BasePlugin):
         self.sign_key = sign_key
         self.repository_publish = repository_publish
         self.use_qubes_repo = use_qubes_repo or {}
+        self.remote_host = remote_host
 
         self.environment.update(
             {
@@ -111,21 +114,6 @@ class TemplatePlugin(BasePlugin):
             }
         )
 
-    def get_sign_key(self):
-        # Check if we have a signing key provided
-        sign_key = self.sign_key.get(self.dist.distribution, None) or self.sign_key.get(
-            "rpm", None
-        )
-
-        if not sign_key:
-            raise TemplateError(f"{self.template}: No signing key found.")
-
-        # Check if we have a gpg client provided
-        if not self.gpg_client:
-            raise TemplateError(f"{self.template}: Please specify GPG client to use!")
-
-        return sign_key
-
     def get_template_timestamp(self):
         # Read information from build stage
         if not (
@@ -143,6 +131,38 @@ class TemplatePlugin(BasePlugin):
             msg = f"{self.template}: Failed to parse build timestamp format."
             raise TemplateError(msg) from e
         return template_timestamp
+
+    def get_sign_key(self):
+        # Check if we have a signing key provided
+        sign_key = self.sign_key.get(self.dist.distribution, None) or self.sign_key.get(
+            "rpm", None
+        )
+
+        if not sign_key:
+            raise TemplateError(f"{self.template}: No signing key found.")
+
+        # Check if we have a gpg client provided
+        if not self.gpg_client:
+            raise TemplateError(f"{self.template}: Please specify GPG client to use!")
+
+        return sign_key
+
+    def upload_to_repository(self):
+        if not self.remote_host:
+            raise TemplateError(f"{self.template}: Cannot find remote host.")
+        try:
+            cmd = [
+                "rsync",
+                "-av",
+                "--progress",
+                f"{self.get_repository_publish_dir()}/rpm/",  # Pay attention to latest "/", we use rsync!
+                {self.remote_host},
+            ]
+            subprocess.run(cmd, check=True)
+        except subprocess.CalledProcessError as e:
+            raise TemplateError(
+                f"{self.template}:{self.dist}: Failed to upload to '{self.remote_host}'."
+            ) from e
 
     def run(
         self, stage: str, repository_publish: str = None, ignore_min_age: bool = False
@@ -276,7 +296,7 @@ class TemplatePlugin(BasePlugin):
         # Publish stage for template components
         if stage == "publish":
             # repository-publish directory
-            artifacts_dir = self.get_repository_publish_dir() / self.dist.type
+            artifacts_dir = self.get_repository_publish_dir() / "rpm"
 
             # Check if publish repository is valid
             if not repository_publish:
