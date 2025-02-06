@@ -246,7 +246,6 @@ lint:
 
 mypy:
   stage: test
-  image: fedora:40
   tags:
     - docker
   before_script:
@@ -260,7 +259,6 @@ mypy:
 
 shellcheck:
   stage: test
-  image: fedora:40
   tags:
     - docker
   before_script:
