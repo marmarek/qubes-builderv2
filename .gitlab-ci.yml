@@ -263,6 +263,8 @@ shellcheck:
     - docker
   before_script:
     - sudo dnf install -y ShellCheck git
+    - git config --global --add safe.directory "$PWD"
+    - git config --global --add safe.directory "$PWD/qubesbuilder/plugins/publish/mirrors"
   script:
     - shellcheck -x -e SC1117 $(grep -l '^#!/bin/\(ba\)\?sh' $(git ls-files))
 
